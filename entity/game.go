@@ -3,7 +3,7 @@ package entity
 type GameProperties struct {
 	Name         string  `json:"name"`
 	Platforms    []Named `json:"platforms"`
-	YearReleased string  `json:"year_released"`
+	YearReleased int     `json:"year_released"`
 	ImageURL     string  `json:"image_url"`
 }
 

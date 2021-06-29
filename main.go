@@ -48,6 +48,7 @@ func main() {
 
 		data := &entity.GameProperties{}
 		var exists bool
+		var err error
 
 		data.ImageURL, exists = s.Find("td.clamp-image-wrap>a>img").Attr("src")
 		if !exists {
@@ -64,7 +65,10 @@ func main() {
 
 		// Format year_released
 		uDate := summary.Find("div.clamp-details>span").Text()
-		data.YearReleased = format.YearReleased(uDate)
+		data.YearReleased, err = format.YearReleased(uDate)
+		if err != nil {
+			log.Fatal("Failed to format date to year: " + err.Error())
+		}
 
 		res, err := json.MarshalIndent(data, "", "  ")
 		if err != nil {
