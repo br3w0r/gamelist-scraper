@@ -36,12 +36,7 @@ func main() {
 	rootURL := "https://www.metacritic.com"
 	doc := OpenURL(rootURL + "/browse/games/score/metascore/all/all/filtered")
 
-	doc.Find("table.clamp-list>tbody").First().Find("tr").Each(func(i int, s *goquery.Selection) {
-		// To be removed
-		if i != 0 {
-			return
-		}
-
+	doc.Find("table.clamp-list>tbody").Find("tr").Each(func(i int, s *goquery.Selection) {
 		if _, exists := s.Attr("class"); exists {
 			return
 		}
@@ -57,7 +52,8 @@ func main() {
 
 		summary := s.Find("td.clamp-summary-wrap")
 
-		data.Name = summary.Find("a.title").Text()
+		titleRef := summary.Find("a.title")
+		data.Name = titleRef.Text()
 
 		// Format paltfrom
 		uPlatform := summary.Find("div.clamp-details>div.platform>span.data").Text()
@@ -69,6 +65,24 @@ func main() {
 		if err != nil {
 			log.Fatal("Failed to format date to year: " + err.Error())
 		}
+
+		detailRef, exists := titleRef.Attr("href")
+		if !exists {
+			log.Fatal("Failed to find link for deatiled description")
+		}
+
+		// Enter deatailed description
+		detail := OpenURL(rootURL + detailRef)
+
+		// Add all other platforms
+		detail.Find("li.product_platforms>span.data>a").Each(func(i int, s *goquery.Selection) {
+			data.AddPlatform(s.Text())
+		})
+
+		// Add genres
+		detail.Find("li.product_genre>span.data").Each(func(i int, s *goquery.Selection) {
+			data.AddGenre(s.Text())
+		})
 
 		res, err := json.MarshalIndent(data, "", "  ")
 		if err != nil {
