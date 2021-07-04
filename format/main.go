@@ -12,7 +12,7 @@ func SinglePlatform(uPlatform string) string {
 	return uPlatform[:breakIndex]
 }
 
-func YearReleased(uDate string) (int32, error) {
-	val, err := strconv.ParseInt(uDate[len(uDate)-4:], 0, 0)
-	return int32(val), err
+func YearReleased(uDate string) (uint32, error) {
+	val, err := strconv.ParseUint(uDate[len(uDate)-4:], 0, 0)
+	return uint32(val), err
 }

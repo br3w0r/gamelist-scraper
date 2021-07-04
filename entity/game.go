@@ -9,7 +9,7 @@ import (
 type GameProperties struct {
 	Name            string          `json:"name"`
 	Platforms       []Named         `json:"platforms"`
-	YearReleased    int32           `json:"year_released"`
+	YearReleased    uint32          `json:"year_released"`
 	ImageUrl        string          `json:"image_url"`
 	Genres          []Named         `json:"genres"`
 	genreChecker    map[string]bool `json:"-"`
