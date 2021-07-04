@@ -1,102 +1,72 @@
 package main
 
 import (
-	"encoding/json"
 	"log"
-	"net/http"
+	"net"
+	"strconv"
 
 	"bitbucket.org/br3w0r/gamelist-sraper/entity"
-	"bitbucket.org/br3w0r/gamelist-sraper/format"
+	"bitbucket.org/br3w0r/gamelist-sraper/helpers"
 	pb "bitbucket.org/br3w0r/gamelist-sraper/proto"
-	"github.com/PuerkitoBio/goquery"
+	"bitbucket.org/br3w0r/gamelist-sraper/scraper"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
-func OpenURL(url string) *goquery.Document {
-	log.Printf("Opening URL: " + url)
+var (
+	ADDRESS   string = helpers.GetEnvOrDefault("ADDRESS", "localhost:8888")
+	TLS       int8   = 0
+	CERT_FILE string = helpers.GetEnvOrDefault("CERT_FILE", "")
+	KEY_FILE  string = helpers.GetEnvOrDefault("KEY_FILE", "")
+)
 
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Fatal("Error making GET request: " + err.Error())
-	}
-
-	defer resp.Body.Close()
-	if resp.StatusCode != 200 {
-		log.Fatalf("Invalid status code: %d %s", resp.StatusCode, resp.Status)
-	}
-
-	doc, err := goquery.NewDocumentFromReader(resp.Body)
-	if err != nil {
-		log.Fatal("Error loading document: " + err.Error())
-	}
-
-	return doc
+type gameScrapeServer struct {
+	pb.UnimplementedGameScrapeServer
 }
 
-func Scrape(c chan pb.GameProperties) {
-	rootURL := "https://www.metacritic.com"
-	doc := OpenURL(rootURL + "/browse/games/score/metascore/all/all/filtered")
-
-	doc.Find("table.clamp-list>tbody").Find("tr").First().Each(func(i int, s *goquery.Selection) {
-		if _, exists := s.Attr("class"); exists {
-			return
+func (s *gameScrapeServer) ScrapeGames(_ *pb.Empty, stream pb.GameScrape_ScrapeGamesServer) error {
+	c := make(chan entity.ScraperResp)
+	go scraper.Scrape(c)
+	for resp := range c {
+		if resp.Err != nil {
+			return resp.Err
 		}
 
-		data := &entity.GameProperties{}
-		var exists bool
-		var err error
-
-		data.ImageUrl, exists = s.Find("td.clamp-image-wrap>a>img").Attr("src")
-		if !exists {
-			log.Fatal("Image doesn't have a src attribute")
+		proto := resp.Game.ConvertToProto()
+		if err := stream.Send(&proto); err != nil {
+			return err
 		}
+	}
+	return nil
+}
 
-		summary := s.Find("td.clamp-summary-wrap")
-
-		titleRef := summary.Find("a.title")
-		data.Name = titleRef.Text()
-
-		// Format paltfrom
-		uPlatform := summary.Find("div.clamp-details>div.platform>span.data").Text()
-		data.AddPlatform(format.SinglePlatform(uPlatform))
-
-		// Format year_released
-		uDate := summary.Find("div.clamp-details>span").Text()
-		data.YearReleased, err = format.YearReleased(uDate)
-		if err != nil {
-			log.Fatal("Failed to format date to year: " + err.Error())
-		}
-
-		detailRef, exists := titleRef.Attr("href")
-		if !exists {
-			log.Fatal("Failed to find link for deatiled description")
-		}
-
-		// Enter deatailed description
-		detail := OpenURL(rootURL + detailRef)
-
-		// Add all other platforms
-		detail.Find("li.product_platforms>span.data>a").Each(func(i int, s *goquery.Selection) {
-			data.AddPlatform(s.Text())
-		})
-
-		// Add genres
-		detail.Find("li.product_genre>span.data").Each(func(i int, s *goquery.Selection) {
-			data.AddGenre(s.Text())
-		})
-
-		c <- data.ConvertToProto()
-	})
-	close(c)
+func ParseEnv() {
+	env := helpers.GetEnvOrDefault("TLS", "0")
+	tls, err := strconv.ParseInt(env, 0, 0)
+	if err != nil {
+		log.Fatalf("failed to parse TLS env key to int: %s", env)
+	}
+	TLS = int8(tls)
 }
 
 func main() {
-	c := make(chan pb.GameProperties)
-	go Scrape(c)
-	for game := range c {
-		res, err := json.MarshalIndent(game, "", "  ")
-		if err != nil {
-			log.Fatalf("Failed to parse a game: %v\n", game)
-		}
-		log.Println(string(res))
+	ParseEnv()
+
+	lis, err := net.Listen("tcp", ADDRESS)
+	if err != nil {
+		log.Fatalf("failed to listen to IP: %s", ADDRESS)
 	}
+	var opts []grpc.ServerOption
+	if TLS == 1 {
+		creds, err := credentials.NewServerTLSFromFile(CERT_FILE, KEY_FILE)
+		if err != nil {
+			log.Fatalf("failed to generate credentials: %v", err)
+		}
+		opts = []grpc.ServerOption{grpc.Creds(creds)}
+	}
+	grpcServer := grpc.NewServer(opts...)
+	pb.RegisterGameScrapeServer(grpcServer, &gameScrapeServer{})
+
+	log.Printf("Starting to serve on address: %s\n", ADDRESS)
+	grpcServer.Serve(lis)
 }
