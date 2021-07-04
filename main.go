@@ -2,12 +2,12 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
 	"bitbucket.org/br3w0r/gamelist-sraper/entity"
 	"bitbucket.org/br3w0r/gamelist-sraper/format"
+	pb "bitbucket.org/br3w0r/gamelist-sraper/proto"
 	"github.com/PuerkitoBio/goquery"
 )
 
@@ -32,11 +32,11 @@ func OpenURL(url string) *goquery.Document {
 	return doc
 }
 
-func main() {
+func Scrape(c chan pb.GameProperties) {
 	rootURL := "https://www.metacritic.com"
 	doc := OpenURL(rootURL + "/browse/games/score/metascore/all/all/filtered")
 
-	doc.Find("table.clamp-list>tbody").Find("tr").Each(func(i int, s *goquery.Selection) {
+	doc.Find("table.clamp-list>tbody").Find("tr").First().Each(func(i int, s *goquery.Selection) {
 		if _, exists := s.Attr("class"); exists {
 			return
 		}
@@ -45,7 +45,7 @@ func main() {
 		var exists bool
 		var err error
 
-		data.ImageURL, exists = s.Find("td.clamp-image-wrap>a>img").Attr("src")
+		data.ImageUrl, exists = s.Find("td.clamp-image-wrap>a>img").Attr("src")
 		if !exists {
 			log.Fatal("Image doesn't have a src attribute")
 		}
@@ -84,11 +84,19 @@ func main() {
 			data.AddGenre(s.Text())
 		})
 
-		res, err := json.MarshalIndent(data, "", "  ")
-		if err != nil {
-			log.Fatal("Failed to serialize data body")
-		}
-
-		fmt.Println(string(res))
+		c <- data.ConvertToProto()
 	})
+	close(c)
+}
+
+func main() {
+	c := make(chan pb.GameProperties)
+	go Scrape(c)
+	for game := range c {
+		res, err := json.MarshalIndent(game, "", "  ")
+		if err != nil {
+			log.Fatalf("Failed to parse a game: %v\n", game)
+		}
+		log.Println(string(res))
+	}
 }

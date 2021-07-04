@@ -1,10 +1,16 @@
 package entity
 
+import (
+	"math"
+
+	pb "bitbucket.org/br3w0r/gamelist-sraper/proto"
+)
+
 type GameProperties struct {
 	Name            string          `json:"name"`
 	Platforms       []Named         `json:"platforms"`
-	YearReleased    int             `json:"year_released"`
-	ImageURL        string          `json:"image_url"`
+	YearReleased    int32           `json:"year_released"`
+	ImageUrl        string          `json:"image_url"`
 	Genres          []Named         `json:"genres"`
 	genreChecker    map[string]bool `json:"-"`
 	platformChecker map[string]bool `json:"-"`
@@ -65,5 +71,31 @@ func (g *GameProperties) AddGenre(genre string) {
 	if !g.genreChecker[genre] && !uselessGenres[genre] {
 		g.Genres = append(g.Genres, Named{genre})
 		g.genreChecker[genre] = true
+	}
+}
+
+func (g *GameProperties) ConvertToProto() pb.GameProperties {
+	nPlatforms := len(g.Platforms)
+	nGenres := len(g.Genres)
+
+	platforms := make([]*pb.Named, nPlatforms)
+	genres := make([]*pb.Named, nGenres)
+
+	maxIter := int(math.Max(float64(nPlatforms), float64(nGenres)))
+	for i := 0; i < maxIter; i++ {
+		if i < nPlatforms {
+			platforms[i] = &pb.Named{Name: g.Platforms[i].Name}
+		}
+		if i < nGenres {
+			genres[i] = &pb.Named{Name: g.Genres[i].Name}
+		}
+	}
+
+	return pb.GameProperties{
+		Name:         g.Name,
+		Platforms:    platforms,
+		YearReleased: g.YearReleased,
+		ImageUrl:     g.ImageUrl,
+		Genres:       genres,
 	}
 }
