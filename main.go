@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	ADDRESS   string = helpers.GetEnvOrDefault("ADDRESS", "localhost:8888")
+	ADDRESS   string = helpers.GetEnvOrDefault("ADDRESS", "localhost")
 	TLS       int8   = 0
 	CERT_FILE string = helpers.GetEnvOrDefault("CERT_FILE", "")
 	KEY_FILE  string = helpers.GetEnvOrDefault("KEY_FILE", "")
@@ -52,9 +52,9 @@ func ParseEnv() {
 func main() {
 	ParseEnv()
 
-	lis, err := net.Listen("tcp", ADDRESS)
+	lis, err := net.Listen("tcp", ADDRESS+":8888")
 	if err != nil {
-		log.Fatalf("failed to listen to IP: %s", ADDRESS)
+		log.Fatalf("failed to listen to IP: %s", ADDRESS+":8888")
 	}
 	var opts []grpc.ServerOption
 	if TLS == 1 {
