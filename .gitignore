@@ -19,3 +19,6 @@ vendor/
 
 # Debug file
 __debug_bin
+
+# Start script for linux
+start.sh
