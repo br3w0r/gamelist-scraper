@@ -3,7 +3,7 @@ package entity
 import (
 	"math"
 
-	pb "bitbucket.org/br3w0r/gamelist-sraper/proto"
+	pb "bitbucket.org/br3w0r/gamelist-scraper/proto"
 )
 
 type GameProperties struct {

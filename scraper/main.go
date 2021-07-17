@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
-	"bitbucket.org/br3w0r/gamelist-sraper/entity"
-	"bitbucket.org/br3w0r/gamelist-sraper/format"
+	"bitbucket.org/br3w0r/gamelist-scraper/entity"
+	"bitbucket.org/br3w0r/gamelist-scraper/format"
 	"github.com/PuerkitoBio/goquery"
 )
 
