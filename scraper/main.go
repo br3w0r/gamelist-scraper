@@ -32,10 +32,10 @@ func OpenURL(url string) *goquery.Document {
 	return doc
 }
 
-func Scrape(c chan entity.ScraperResp) {
+func Scrape(c chan entity.ScraperResp, pagesToScrape int) {
 	rootURL := "https://www.metacritic.com"
 
-	for i := 0; i < 187; i++ {
+	for i := 0; i < pagesToScrape; i++ {
 		doc := OpenURL(rootURL + fmt.Sprintf("/browse/games/score/metascore/all/all/filtered?page=%d", i))
 
 		var err error = nil
