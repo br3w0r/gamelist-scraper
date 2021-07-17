@@ -2,6 +2,7 @@ package scraper
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -33,63 +34,66 @@ func OpenURL(url string) *goquery.Document {
 
 func Scrape(c chan entity.ScraperResp) {
 	rootURL := "https://www.metacritic.com"
-	doc := OpenURL(rootURL + "/browse/games/score/metascore/all/all/filtered")
 
-	var err error = nil
-	doc.Find("table.clamp-list>tbody").Find("tr").Each(func(i int, s *goquery.Selection) {
-		if _, exists := s.Attr("class"); exists || err != nil {
-			return
-		}
+	for i := 0; i < 187; i++ {
+		doc := OpenURL(rootURL + fmt.Sprintf("/browse/games/score/metascore/all/all/filtered?page=%d", i))
 
-		data := entity.GameProperties{}
-		var exists bool
+		var err error = nil
+		doc.Find("table.clamp-list>tbody").Find("tr").Each(func(i int, s *goquery.Selection) {
+			if _, exists := s.Attr("class"); exists || err != nil {
+				return
+			}
 
-		data.ImageUrl, exists = s.Find("td.clamp-image-wrap>a>img").Attr("src")
-		if !exists {
-			err = errors.New("image doesn't have a src attribute")
-			c <- entity.ScraperResp{Game: entity.GameProperties{}, Err: err}
-			return
-		}
+			data := entity.GameProperties{}
+			var exists bool
 
-		summary := s.Find("td.clamp-summary-wrap")
+			data.ImageUrl, exists = s.Find("td.clamp-image-wrap>a>img").Attr("src")
+			if !exists {
+				err = errors.New("image doesn't have a src attribute")
+				c <- entity.ScraperResp{Game: entity.GameProperties{}, Err: err}
+				return
+			}
 
-		titleRef := summary.Find("a.title")
-		data.Name = titleRef.Text()
+			summary := s.Find("td.clamp-summary-wrap")
 
-		// Format paltfrom
-		uPlatform := summary.Find("div.clamp-details>div.platform>span.data").Text()
-		data.AddPlatform(format.SinglePlatform(uPlatform))
+			titleRef := summary.Find("a.title")
+			data.Name = titleRef.Text()
 
-		// Format year_released
-		uDate := summary.Find("div.clamp-details>span").Text()
-		data.YearReleased, err = format.YearReleased(uDate)
-		if err != nil {
-			err = errors.New("failed to format date to year: " + err.Error())
-			c <- entity.ScraperResp{Game: entity.GameProperties{}, Err: err}
-			return
-		}
+			// Format paltfrom
+			uPlatform := summary.Find("div.clamp-details>div.platform>span.data").Text()
+			data.AddPlatform(format.SinglePlatform(uPlatform))
 
-		detailRef, exists := titleRef.Attr("href")
-		if !exists {
-			err = errors.New("failed to find link for deatiled description")
-			c <- entity.ScraperResp{Game: entity.GameProperties{}, Err: err}
-			return
-		}
+			// Format year_released
+			uDate := summary.Find("div.clamp-details>span").Text()
+			data.YearReleased, err = format.YearReleased(uDate)
+			if err != nil {
+				err = errors.New("failed to format date to year: " + err.Error())
+				c <- entity.ScraperResp{Game: entity.GameProperties{}, Err: err}
+				return
+			}
 
-		// Enter deatailed description
-		detail := OpenURL(rootURL + detailRef)
+			detailRef, exists := titleRef.Attr("href")
+			if !exists {
+				err = errors.New("failed to find link for deatiled description")
+				c <- entity.ScraperResp{Game: entity.GameProperties{}, Err: err}
+				return
+			}
 
-		// Add all other platforms
-		detail.Find("li.product_platforms>span.data>a").Each(func(i int, s *goquery.Selection) {
-			data.AddPlatform(s.Text())
+			// Enter deatailed description
+			detail := OpenURL(rootURL + detailRef)
+
+			// Add all other platforms
+			detail.Find("li.product_platforms>span.data>a").Each(func(i int, s *goquery.Selection) {
+				data.AddPlatform(s.Text())
+			})
+
+			// Add genres
+			detail.Find("li.product_genre>span.data").Each(func(i int, s *goquery.Selection) {
+				data.AddGenre(s.Text())
+			})
+
+			c <- entity.ScraperResp{Game: data, Err: nil}
 		})
-
-		// Add genres
-		detail.Find("li.product_genre>span.data").Each(func(i int, s *goquery.Selection) {
-			data.AddGenre(s.Text())
-		})
-
-		c <- entity.ScraperResp{Game: data, Err: nil}
-	})
+	}
 	close(c)
 }
