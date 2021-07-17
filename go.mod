@@ -1,4 +1,4 @@
-module bitbucket.org/br3w0r/gamelist-scraper
+module github.com/br3w0r/gamelist-scraper
 
 go 1.16
 

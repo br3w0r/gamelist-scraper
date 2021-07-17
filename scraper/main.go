@@ -6,9 +6,9 @@ import (
 	"log"
 	"net/http"
 
-	"bitbucket.org/br3w0r/gamelist-scraper/entity"
-	"bitbucket.org/br3w0r/gamelist-scraper/format"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/br3w0r/gamelist-scraper/entity"
+	"github.com/br3w0r/gamelist-scraper/format"
 )
 
 func OpenURL(url string) *goquery.Document {

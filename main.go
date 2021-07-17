@@ -5,10 +5,10 @@ import (
 	"net"
 	"strconv"
 
-	"bitbucket.org/br3w0r/gamelist-scraper/entity"
-	"bitbucket.org/br3w0r/gamelist-scraper/helpers"
-	pb "bitbucket.org/br3w0r/gamelist-scraper/proto"
-	"bitbucket.org/br3w0r/gamelist-scraper/scraper"
+	"github.com/br3w0r/gamelist-scraper/entity"
+	"github.com/br3w0r/gamelist-scraper/helpers"
+	pb "github.com/br3w0r/gamelist-scraper/proto"
+	"github.com/br3w0r/gamelist-scraper/scraper"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 )
