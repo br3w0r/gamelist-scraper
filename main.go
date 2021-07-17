@@ -53,7 +53,7 @@ func ParseEnv() {
 	env = helpers.GetEnvOrDefault("PAGES_TO_SCRAPE", "1")
 	pagesToScrape, err := strconv.ParseInt(env, 0, 0)
 	if err != nil {
-		log.Fatalf("failed to parse TLS env key to int: %s", env)
+		log.Fatalf("failed to parse PAGES_TO_SCRAPE env key to int: %s", env)
 	}
 	PAGES_TO_SCRAPE = int(pagesToScrape)
 }
